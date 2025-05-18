@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>电影列表</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        thead {
+            background-color: #007bff;
+            color: white;
+        }
+
+        th, td {
+            padding: 12px 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            max-width: 160px;
+            word-wrap: break-word;
+        }
+
+        th:hover {
+            background-color: #0056b3;
+            cursor: pointer;
+        }
+
+        img {
+            width: 80px;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .page-btn {
+            margin: 0 5px;
+            padding: 6px 12px;
+            border: 1px solid #007bff;
+            background-color: white;
+            color: #007bff;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .page-btn:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .page-btn.active {
+            background-color: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>电影信息展示</h2>
+
+    <table id="movieTable"></table>
+    <div id="paginationBtns" class="pagination"></div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            let currentPage = 1;
+            const PAGE_SIZE = 15;
+            let movieData = [];
+            let sortAsc = true;
+
+            const table = document.getElementById('movieTable');
+            const pagination = document.getElementById('paginationBtns');
+
+            function loadData(page) {
+                fetch(`/api/movies?page=${page}&page_size=${PAGE_SIZE}`)
+                    .then(response => response.json())
+                    .then(({ total, page: currentPageRes, data }) => {
+                        movieData = data || [];
+                        renderTable(movieData);
+                        renderPagination(total, currentPageRes);
+                    })
+                    .catch(error => {
+                        console.error('数据加载失败:', error);
+                        table.innerHTML = '<thead><tr><th colspan="8">数据加载失败，请检查后端服务</th></tr></thead>';
+                    });
+            }
+
+            function renderTable(data) {
+                if (!data || data.length === 0) {
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>电影名称</th>
+                                <th>类型</th>
+                                <th>导演</th>
+                                <th>演员</th>
+                                <th>上映时间</th>
+                                <th>数据源</th>
+                                <th>头图</th>
+                                <th>简介</th>
+                            </tr>
+                        </thead>
+                        <tbody><tr><td colspan="8">暂无数据</td></tr></tbody>
+                    `;
+                    return;
+                }
+
+                table.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>电影名称</th>
+                            <th>类型</th>
+                            <th>导演</th>
+                            <th>演员</th>
+                            <th id="sortTime" style="cursor:pointer;">上映时间 ⬍</th>
+                            <th>数据源</th>
+                            <th>头图</th>
+                            <th>简介</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.map(item => `
+                            <tr>
+                                <td title="${item['电影名称'] || ''}">${item['电影名称'] || '—'}</td>
+                                <td title="${item['类型'] || ''}">${item['类型'] || '—'}</td>
+                                <td title="${item['导演'] || ''}">${item['导演'] || '—'}</td>
+                                <td title="${item['演员'] || ''}">${item['演员'] || '—'}</td>
+                                <td title="${item['上映时间'] || ''}">${item['上映时间'] || '—'}</td>
+                                <td title="${item['数据源'] || ''}">${item['数据源'] || '—'}</td>
+                                <td>
+                                    ${item['头图'] && item['头图'].startsWith('http') 
+                                        ? `<img src="${item['头图']}" alt="头图">` 
+                                        : '—'}
+                                </td>
+                                <td title="${item['简介'] || ''}">${item['简介'] || '—'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                `;
+
+                // 添加点击排序功能
+                const sortHeader = document.getElementById('sortTime');
+                sortHeader.onclick = () => {
+                    sortAsc = !sortAsc;
+                    movieData.sort((a, b) => {
+                        const t1 = new Date(a['上映时间']);
+                        const t2 = new Date(b['上映时间']);
+                        return sortAsc ? t1 - t2 : t2 - t1;
+                    });
+                    renderTable(movieData);
+                };
+            }
+
+            function renderPagination(total, currentPageRes) {
+                const totalPages = Math.ceil(total / PAGE_SIZE);
+                pagination.innerHTML = '';
+
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'page-btn';
+                prevBtn.textContent = '上一页';
+                prevBtn.disabled = currentPageRes === 1;
+                prevBtn.onclick = () => {
+                    currentPage--;
+                    loadData(currentPage);
+                };
+                pagination.appendChild(prevBtn);
+
+                const startPage = Math.max(1, currentPageRes - 2);
+                const endPage = Math.min(totalPages, currentPageRes + 2);
+                for (let i = startPage; i <= endPage; i++) {
+                    const btn = document.createElement('button');
+                    btn.className = `page-btn ${i === currentPageRes ? 'active' : ''}`;
+                    btn.textContent = i;
+                    btn.onclick = () => {
+                        currentPage = i;
+                        loadData(currentPage);
+                    };
+                    pagination.appendChild(btn);
+                }
+
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'page-btn';
+                nextBtn.textContent = '下一页';
+                nextBtn.disabled = currentPageRes === totalPages;
+                nextBtn.onclick = () => {
+                    currentPage++;
+                    loadData(currentPage);
+                };
+                pagination.appendChild(nextBtn);
+            }
+
+            loadData(currentPage);
+        });
+    </script>
+
+</body>
+</html>

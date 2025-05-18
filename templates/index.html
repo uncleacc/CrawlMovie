@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>电影数据展示</title>
+    <style>
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 10px; }
+        img { max-width: 80px; height: auto; display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>电影数据列表</h1>
+        <table id="movieTable">
+            <thead>
+                <tr>
+                    <th>电影名称</th>
+                    <th>类型</th>
+                    <th>导演</th>
+                    <th>演员</th>
+                    <th>上映时间</th>
+                    <th>数据源</th>
+                    <th>头图</th>
+                    <th>简介</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script>
+        fetch('/api/movies')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('movieTable').getElementsByTagName('tbody')[0];
+                data.forEach(item => {
+                    const row = tbody.insertRow();
+                    row.insertCell(0).textContent = item['电影名称'] || '—';
+                    row.insertCell(1).textContent = item['类型'] || '—';
+                    row.insertCell(2).textContent = item['导演'] || '—';
+                    row.insertCell(3).textContent = item['演员'] || '—';
+                    row.insertCell(4).textContent = item['上映时间'] || '—';
+                    row.insertCell(5).textContent = item['数据源'] || '—';
+                    row.insertCell(6).textContent = item['头图'];
+
+                    // // 头图单元格改成图片展示
+                    // const imgCell = row.insertCell(6);
+                    // if (item['头图']) {
+                    //     const img = document.createElement('img');
+                    //     img.src = item['头图'];
+                    //     img.alt = '头图';
+                    //     img.style.width = '80px';
+                    //     img.style.height = 'auto';
+                    //     imgCell.appendChild(img);
+                    // } else {
+                    //     imgCell.textContent = '—';
+                    // }
+
+                    row.insertCell(7).textContent = item['简介'] || '—';
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    </script>
+</body>
+</html>
